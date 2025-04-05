@@ -1,8 +1,8 @@
-package com.denisJava.testPlugin.spaceship.elements;
+package com.denisJava.testPlugin.legacy.spaceship.elements;
 
-import com.denisJava.testPlugin.spaceship.RepairIngredient;
-import com.denisJava.testPlugin.spaceship.ShipNodeBreakable;
-import com.denisJava.testPlugin.spaceship.ShipNodeStatus;
+import com.denisJava.testPlugin.legacy.spaceship.RepairIngredient;
+import com.denisJava.testPlugin.legacy.spaceship.ShipNodeBreakable;
+import com.denisJava.testPlugin.legacy.spaceship.ShipNodeStatus;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Location;
@@ -29,15 +29,9 @@ public class ShipGenerator extends ShipNodeBreakable {
 
     @Override
     public ShipNodeStatus update(ShipStatus sh, ShipNodeStatus status) {
-        if (status != ShipNodeStatus.OK && status != ShipNodeStatus.NOT_ENOUGH_RESOURCES && status != ShipNodeStatus.DISABLED) return status;
-
-        if (durability <= 0) {
-            return ShipNodeStatus.BROKEN;
-        }
-
-        if (sh.consumeWater(200)) {
-            sh.produceEnergy(200);
-            durability -= 100;
+        if (sh.consumeWater(100)) {
+            sh.produceEnergy(100);
+            durability -= 50;
             return ShipNodeStatus.OK;
         }
         return ShipNodeStatus.NOT_ENOUGH_RESOURCES;

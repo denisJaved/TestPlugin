@@ -1,12 +1,14 @@
-package com.denisJava.testPlugin.spaceship;
+package com.denisJava.testPlugin.legacy.spaceship;
 
-import com.denisJava.testPlugin.spaceship.elements.ShipStatus;
+import com.denisJava.testPlugin.legacy.spaceship.elements.ShipStatus;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -17,6 +19,7 @@ import org.bukkit.metadata.MetadataValue;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.scoreboard.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -31,14 +34,14 @@ public class GameLoop implements Listener {
     public static void startLoop(World world) {
         if (running) return;
         ship = new ShipStatus(world);
-        SCHEDULER.runTaskTimer(plugin, loop, 20, 20);
+        SCHEDULER.runTaskTimer(plugin, loop, 20, 10);
         running = true;
         logger().info("SpaceShip started");
     }
+
     public static void stopLoop() {
         running = false;
     }
-
 
 
     public static Scoreboard scoreboard;
@@ -71,7 +74,7 @@ public class GameLoop implements Listener {
     };
 
     @EventHandler
-    public void onBlockRightClick(PlayerInteractEvent event) {
+    public void onBlockInteraction(PlayerInteractEvent event) {
         if (event.getClickedBlock() == null) return;
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
 
@@ -86,10 +89,7 @@ public class GameLoop implements Listener {
 
                 Inventory inventory = Bukkit.createInventory(null, 9, Component.text("Ремонт: ").append(Component.text(node.name)));
 
-                for (int i = 0; i < 8 && i < node.currentRepair.size(); i++) {
-                    RepairIngredient ri = node.currentRepair.get(i);
-                    inventory.setItem(i, new ItemStack(ri.item).asQuantity(ri.amount));
-                }
+                updateRepairScreen(node, inventory);
 
                 player.openInventory(inventory);
                 player.setMetadata("repair-ui", new FixedMetadataValue(plugin, id));
@@ -101,6 +101,17 @@ public class GameLoop implements Listener {
                 ShipNode node = ship.getNode(nodes.getFirst().asInt());
                 node.shouldStop = !node.shouldStop;
             }
+        }
+    }
+
+    private static void updateRepairScreen(ShipNodeBreakable node, Inventory inventory) {
+        for (int i = 0; i < 8; i++) {
+            if (i >= node.currentRepair.size()) {
+                inventory.setItem(i, new ItemStack(Material.AIR));
+                continue;
+            }
+            RepairIngredient ri = node.currentRepair.get(i);
+            inventory.setItem(i, new ItemStack(ri.item).asQuantity(ri.amount));
         }
     }
 
@@ -132,16 +143,27 @@ public class GameLoop implements Listener {
                     } else {
                         event.getClickedInventory().setItem(event.getSlot(), new ItemStack(ri.item).asQuantity(Math.abs(dif)));
                     }
-                    player.closeInventory();
+                    ship.getWorld().playSound(node.repairPos, Sound.BLOCK_HEAVY_CORE_PLACE, 1F, 0.3F);
                     if (node.currentRepair.isEmpty()) {
                         node.repair();
                         ship.getWorld().setBlockData(node.repairPos, Material.AIR.createBlockData());
                         ship.getWorld().playSound(node.repairPos, Sound.BLOCK_BEACON_ACTIVATE, 1F, 0.3F);
                         ship.getWorld().spawnParticle(Particle.ENCHANT, node.repairPos, 50);
+                        event.getInventory().close();
+                        player.closeInventory();
+                    } else {
+                        updateRepairScreen(node, event.getInventory());
                     }
-                    break;
+                    return;
                 }
             }
+            ship.getWorld().playSound(node.repairPos, Sound.BLOCK_NOTE_BLOCK_DIDGERIDOO, 1F, 0.6F);
+            node.currentRepair = new ArrayList<>();
+
+            for (RepairIngredient ingredient : node.repairIngredients) {
+                node.currentRepair.add(new RepairIngredient(ingredient.amount, ingredient.item));
+            }
+            updateRepairScreen(node, event.getInventory());
         }
     }
 
@@ -151,6 +173,26 @@ public class GameLoop implements Listener {
 
         if (player.hasMetadata("repair-ui")) {
             player.removeMetadata("repair-ui", plugin);
+        }
+    }
+
+    @EventHandler
+    public void onBlockBroken(BlockBreakEvent event) {
+        if (!running || event.getPlayer().getGameMode() == GameMode.CREATIVE) return;
+
+        event.setCancelled(true);
+        if (event.getBlock().hasMetadata("spaceFarmBlock")) {
+            event.getPlayer().give(event.getBlock().getDrops(event.getPlayer().getActiveItem()));
+        }
+    }
+
+    public static boolean farmBuildingMode = false;
+
+    @EventHandler
+    public void onBlockPlaced(BlockPlaceEvent event) {
+        if (farmBuildingMode) {
+            event.getBlock().getState().setMetadata("spaceFarmBlock", new FixedMetadataValue(plugin, true));
+            event.getBlock().getWorld().playSound(event.getBlock().getLocation(), Sound.BLOCK_AMETHYST_BLOCK_RESONATE, 1F, 1F);
         }
     }
 }

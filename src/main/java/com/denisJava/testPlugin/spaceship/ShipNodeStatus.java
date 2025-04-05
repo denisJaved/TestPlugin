@@ -1,9 +1,20 @@
 package com.denisJava.testPlugin.spaceship;
 
-public enum ShipNodeStatus {
-    // Update
-    OK, NOT_ENOUGH_RESOURCES,
+import net.kyori.adventure.text.Component;
 
-    // No updates
-    DISABLED, NOT_BUILT_YET, BROKEN, REPAIRING
+public enum ShipNodeStatus {
+
+    OK(true, Component.text("В Работе")),
+    WAITING_FOR_RESOURCES(true, Component.text("Нет ресурсов")),
+
+    HAND_DISABLED(false, Component.text("Отключён")),
+    BROKEN(false, Component.text("Сломан")),
+    NOT_BUILT_YET(false, Component.text("Не построен"))
+
+    ;final boolean shouldUpdate;
+    final Component text;
+    ShipNodeStatus(boolean shouldUpdate, Component text) {
+        this.shouldUpdate = shouldUpdate;
+        this.text = text;
+    }
 }

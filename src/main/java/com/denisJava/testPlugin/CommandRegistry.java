@@ -1,8 +1,8 @@
 package com.denisJava.testPlugin;
 
-import com.denisJava.testPlugin.spaceship.GameLoop;
-import com.denisJava.testPlugin.spaceship.SFXUtils;
-import com.denisJava.testPlugin.spaceship.ShipNodeBreakable;
+import com.denisJava.testPlugin.legacy.spaceship.GameLoop;
+import com.denisJava.testPlugin.legacy.spaceship.SFXUtils;
+import com.denisJava.testPlugin.legacy.spaceship.ShipNodeBreakable;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -14,13 +14,13 @@ import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.title.Title;
-import org.bukkit.Axis;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.Vector;
+
+import static com.denisJava.testPlugin.TestPlugin.currentParkourBlock;
+import static com.denisJava.testPlugin.TestPlugin.lastParkourOffset;
 
 @SuppressWarnings("UnstableApiUsage")
 public class CommandRegistry {
@@ -81,6 +81,9 @@ public class CommandRegistry {
                                             )
                                     )
                             ))
+                            .then(Commands.literal("farmBuild")
+                                    .executes(context -> {GameLoop.farmBuildingMode=!GameLoop.farmBuildingMode;return 0;})
+                            )
                     )
                     .build();
             event.registrar().register(cmd);
@@ -95,18 +98,24 @@ public class CommandRegistry {
         World world = context.getSource().getLocation().getWorld();
         Location location = context.getSource().getLocation().toBlockLocation().add(0, -1, 0);
         world.setBlockData(location, Material.GOLD_BLOCK.createBlockData());
-        TestPlugin.currentParkourBlock = location.toVector();
+        currentParkourBlock = location.toVector();
         if (context.getSource().getExecutor() instanceof Player p) p.showTitle(Title.title(Component.text("Паркур начат").color(TextColor.color(0, 255, 0)), Component.text("Прыгай на ").append(Component.text("золотые блоки").color(TextColor.color(255, 255, 0)))));
         return 0;
     };
     public static final Command<CommandSourceStack> stopParkour = context -> {
-        if (context.getSource().getExecutor() instanceof Player p) p.getInventory().clear();
-        World world = context.getSource().getLocation().getWorld();
-        world.setBlockData(TestPlugin.currentParkourBlock.toLocation(world), Material.AIR.createBlockData());
-        world.setBlockData(TestPlugin.currentParkourBlock.add(TestPlugin.lastParkourOffset).toLocation(world), Material.OBSIDIAN.createBlockData());
-        TestPlugin.currentParkourBlock = new Vector();
-        TestPlugin.lastParkourOffset = new Vector(0, 1, 0);
-        if (context.getSource().getExecutor() instanceof Player p) p.showTitle(Title.title(Component.text("Паркур закончен").color(TextColor.color(0, 255, 0)), Component.text("")));
+        if (context.getSource().getExecutor() instanceof Player p) {
+            p.getInventory().clear();
+            World world = context.getSource().getLocation().getWorld();
+            world.setBlockData(currentParkourBlock.toLocation(world), Material.AIR.createBlockData());
+            world.setBlockData(currentParkourBlock.clone().add(lastParkourOffset.multiply(-1)).toLocation(world), Material.OBSIDIAN.createBlockData());
+            world.playSound(p, Sound.BLOCK_AMETHYST_BLOCK_BREAK, 1, 0);
+            p.getInventory().clear();
+            p.teleport(currentParkourBlock.clone().add(lastParkourOffset.clone().multiply(-1)).add(new Vector(0.5, 1, 0.5)).toLocation(world));
+            p.showTitle(Title.title(Component.text("Ты упал!").color(TextColor.color(255, 0, 0)), Component.text("Прыгай на ").append(Component.text("золотые блоки").color(TextColor.color(255, 255, 0)))));
+            currentParkourBlock = new Vector();
+            lastParkourOffset = new Vector(0, 1, 0);
+            p.showTitle(Title.title(Component.text("Паркур закончен").color(TextColor.color(0, 255, 0)), Component.text("")));
+        }
         return 0;
     };
     public static final Command<CommandSourceStack> parkourIce = context -> {

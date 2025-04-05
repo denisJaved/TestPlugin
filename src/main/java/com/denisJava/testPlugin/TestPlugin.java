@@ -1,6 +1,6 @@
 package com.denisJava.testPlugin;
 
-import com.denisJava.testPlugin.spaceship.GameLoop;
+import com.denisJava.testPlugin.legacy.spaceship.GameLoop;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.title.Title;
@@ -63,7 +63,7 @@ public class TestPlugin extends JavaPlugin implements Listener {
 
             Block next = world.getBlockAt(currentParkourBlock.clone().add(newOffset).toLocation(world));
             world.setBlockData(next.getLocation(), iceBlocks ? Material.BLUE_ICE.createBlockData() : Material.GOLD_BLOCK.createBlockData());
-            currentParkourBlock = next.getLocation().toVector();
+            currentParkourBlock = currentParkourBlock.clone().add(newOffset).toLocation(world).toVector();
 
             Block previous = world.getBlockAt(location.toBlockLocation().add(lastParkourOffset.multiply(-1)));
             previous.setType(Material.AIR);

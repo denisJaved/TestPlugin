@@ -1,8 +1,7 @@
-package com.denisJava.testPlugin.spaceship.elements;
+package com.denisJava.testPlugin.legacy.spaceship.elements;
 
-import com.denisJava.testPlugin.TestPlugin;
-import com.denisJava.testPlugin.spaceship.ShipNode;
-import com.denisJava.testPlugin.spaceship.ShipNodeStatus;
+import com.denisJava.testPlugin.legacy.spaceship.ShipNode;
+import com.denisJava.testPlugin.legacy.spaceship.ShipNodeStatus;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Sign;
